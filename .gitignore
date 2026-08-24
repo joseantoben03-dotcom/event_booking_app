@@ -1,0 +1,41 @@
+# Dependencies
+**/node_modules/
+
+# Environment and local secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build and tooling output
+**/dist/
+**/build/
+**/.vite/
+**/coverage/
+**/.nyc_output/
+
+# Logs and local runtime files
+*.log
+logs/
+*.pid
+*.pid.lock
+
+# Database dumps and local data
+*.sql.gz
+*.sqlite
+*.sqlite3
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo

@@ -1,0 +1,4 @@
+// Fixed set of bookable venues. Keep in sync with frontend/src/constants/venues.js
+const VENUES = ['Main Auditorium', 'APJ Auditorium', 'MBA Hall', 'Library Hall', 'Presentation Hall'];
+
+module.exports = { VENUES };

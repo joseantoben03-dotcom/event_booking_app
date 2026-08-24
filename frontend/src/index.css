@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-surface text-slate-800;
+}
+
+/* Improve readability for the compact dashboard and form text. */
+.text-sm {
+  font-size: 0.9375rem;
+}
+
+.text-xs {
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 639px) {
+  body {
+    font-size: 0.875rem;
+  }
+
+  .text-xs {
+    font-size: 0.75rem;
+  }
+
+  .text-sm {
+    font-size: 0.875rem;
+  }
+
+  .text-lg {
+    font-size: 1rem;
+  }
+
+  .text-xl {
+    font-size: 1.125rem;
+  }
+
+  .text-2xl {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-sm {
+    font-size: 1.125rem;
+  }
+
+  .text-xs {
+    font-size: 1rem;
+  }
+}

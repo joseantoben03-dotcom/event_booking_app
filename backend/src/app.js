@@ -1,0 +1,42 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+require('dotenv').config();
+
+const passport = require('./config/passport');
+const authRoutes = require('./routes/authRoutes');
+const eventRoutes = require('./routes/eventRoutes');
+const userRoutes = require('./routes/userRoutes');
+
+const app = express();
+
+app.use(helmet());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
+app.use(passport.initialize());
+
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+app.use('/auth', authRoutes);
+app.use('/events', eventRoutes);
+app.use('/users', userRoutes);
+
+// 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found', details: `No route for ${req.method} ${req.originalUrl}` });
+});
+
+// Central error handler
+app.use((err, req, res, next) => {
+  console.error(err.message);
+  res.status(err.status || 500).json({ error: 'Server error', details: process.env.NODE_ENV === 'development' ? err.message : undefined });
+});
+
+module.exports = app;
