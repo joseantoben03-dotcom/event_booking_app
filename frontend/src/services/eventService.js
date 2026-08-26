@@ -45,6 +45,11 @@ export async function listEvents(params = {}) {
   return res.data;
 }
 
+export async function listAvailability(params = {}) {
+  const res = await api.get('/events/availability', { params });
+  return res.data;
+}
+
 export async function getEvent(id) {
   const res = await api.get(`/events/${id}`);
   return res.data;
@@ -62,5 +67,15 @@ export async function approvePrincipal(id, status) {
 
 export async function approveCampusManager(id, status) {
   const res = await api.patch(`/events/${id}/approve-campus-manager`, { status });
+  return res.data;
+}
+
+export async function reassignVenue(id, venue) {
+  const res = await api.patch(`/events/${id}/reassign-venue`, { venue });
+  return res.data;
+}
+
+export async function reassignSlot(id, payload) {
+  const res = await api.patch(`/events/${id}/reassign-slot`, payload);
   return res.data;
 }

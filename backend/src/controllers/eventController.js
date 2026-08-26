@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-const { Event, User } = require('../models');
+const { Event, User, Venue } = require('../models');
 const { serializeEvent, computeStatus, isSlotFree, isFullyPending } = require('../services/eventService');
 
 function normalizedDesignation(user) {
@@ -7,7 +7,7 @@ function normalizedDesignation(user) {
 }
 
 // Shared by create + edit: throws a 409-worthy conflict if the venue/date/time
-// range overlaps an existing request that isn't rejected/cancelled.
+// range overlaps an existing request that isn't rejected/cancelled/expired.
 async function findClashingEvent({ venue, event_date, start_time, end_time, excludeId }) {
   const sameDayVenue = await Event.findAll({ where: { venue, event_date } });
   return sameDayVenue.find(
@@ -19,8 +19,11 @@ async function findClashingEvent({ venue, event_date, start_time, end_time, excl
   );
 }
 
-// POST /events  (ap or hod; admins may book on behalf of any ap/hod user
-// via on_behalf_of_user_id)
+// POST /events  (ap, hod, or campus_manager)
+// - Campus Managers can book on behalf of any user via on_behalf_of_user_id.
+// - Whenever the request is initiated by a Campus Manager (booking for
+//   themselves or on behalf of someone else), the booking is instantly and
+//   fully approved - no one else needs to sign off on it.
 async function createEvent(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -29,9 +32,9 @@ async function createEvent(req, res) {
 
   const { venue, event_name, purpose, organizer, no_of_participants, event_date, start_time, end_time, on_behalf_of_user_id } = req.body;
   let creator = req.user;
-  const requesterIsAdmin = normalizedDesignation(req.user) === 'admin';
+  const requesterIsCampusManager = normalizedDesignation(req.user) === 'campus_manager';
 
-  if (requesterIsAdmin && on_behalf_of_user_id) {
+  if (requesterIsCampusManager && on_behalf_of_user_id) {
     const target = await User.findByPk(on_behalf_of_user_id);
     if (!target) {
       return res.status(404).json({ error: 'Not found', details: 'Selected user does not exist.' });
@@ -56,6 +59,17 @@ async function createEvent(req, res) {
     });
   }
 
+  // Campus Managers hold final authority - anything they book is confirmed
+  // immediately, skipping the normal HOD -> Principal -> Campus Manager chain.
+  const approvals = requesterIsCampusManager
+    ? { hod_approved: 'approved', principal_approved: 'approved', campus_manager_approved: 'approved' }
+    : { hod_approved: isHod ? 'approved' : 'pending', principal_approved: 'pending', campus_manager_approved: 'pending' };
+  const approvalTimes = requesterIsCampusManager
+    ? { hod_approved_at: new Date(), principal_approved_at: new Date(), campus_manager_approved_at: new Date() }
+    : isHod
+    ? { hod_approved_at: new Date() }
+    : {};
+
   const event = await Event.create({
     user_id: creator.id,
     venue,
@@ -66,9 +80,8 @@ async function createEvent(req, res) {
     event_date,
     start_time,
     end_time,
-    hod_approved: isHod ? 'approved' : 'pending',
-    principal_approved: 'pending',
-    campus_manager_approved: 'pending',
+    ...approvals,
+    ...approvalTimes,
   });
 
   const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
@@ -138,7 +151,7 @@ async function cancelEvent(req, res) {
     return res.status(400).json({ error: 'Too late', details: 'This event has already started or passed and cannot be cancelled.' });
   }
 
-  await event.update({ is_cancelled: true });
+  await event.update({ is_cancelled: true, cancelled_at: new Date() });
   const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
   return res.json(serializeEvent(withCreator));
 }
@@ -174,6 +187,19 @@ async function listEvents(req, res) {
   return res.json(serialized);
 }
 
+// GET /events/availability?venue=&event_date=  - lightweight lookup of every
+// active (non free-able) booking for a venue on a given day, used by the
+// booking form to grey out taken time ranges.
+async function listAvailability(req, res) {
+  const { venue, event_date } = req.query;
+  if (!venue || !event_date) {
+    return res.status(400).json({ error: 'Validation failed', details: 'venue and event_date are required.' });
+  }
+  const events = await Event.findAll({ where: { venue, event_date }, include: { model: User, as: 'creator' } });
+  const active = events.map(serializeEvent).filter((e) => !isSlotFree(e.status));
+  return res.json(active);
+}
+
 // GET /events/:id
 async function getEvent(req, res) {
   const event = await Event.findByPk(req.params.id, { include: { model: User, as: 'creator' } });
@@ -181,8 +207,8 @@ async function getEvent(req, res) {
   return res.json(serializeEvent(event));
 }
 
-// PATCH /events/:id/approve-hod - HOD only for their own department; Admins
-// can approve/reject on behalf of any department (direct override).
+// PATCH /events/:id/approve-hod - HOD only for their own department; Campus
+// Managers can approve/reject on behalf of any department (direct override).
 async function approveHod(req, res) {
   const { status } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
@@ -192,15 +218,15 @@ async function approveHod(req, res) {
   const event = await Event.findByPk(req.params.id, { include: { model: User, as: 'creator' } });
   if (!event) return res.status(404).json({ error: 'Not found', details: 'Event does not exist.' });
 
-  const isAdmin = normalizedDesignation(req.user) === 'admin';
-  if (!isAdmin && (!event.creator || event.creator.department !== req.user.department)) {
+  const isCampusManager = normalizedDesignation(req.user) === 'campus_manager';
+  if (!isCampusManager && (!event.creator || event.creator.department !== req.user.department)) {
     return res.status(403).json({
       error: 'Forbidden',
       details: 'You can only approve requests from your own department.',
     });
   }
 
-  await event.update({ hod_approved: status });
+  await event.update({ hod_approved: status, hod_approved_at: new Date() });
   const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
   return res.json(serializeEvent(withCreator));
 }
@@ -215,7 +241,7 @@ function makeApprovalHandler(field) {
     const event = await Event.findByPk(req.params.id);
     if (!event) return res.status(404).json({ error: 'Not found', details: 'Event does not exist.' });
 
-    await event.update({ [field]: status });
+    await event.update({ [field]: status, [`${field}_at`]: new Date() });
     const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
     return res.json(serializeEvent(withCreator));
   };
@@ -224,8 +250,83 @@ function makeApprovalHandler(field) {
 const approvePrincipal = makeApprovalHandler('principal_approved');
 const approveCampusManager = makeApprovalHandler('campus_manager_approved');
 
-// DELETE /events/:id - admin only. Permanently removes a booking, unlike
-// cancel which just marks it inactive and keeps the record.
+// PATCH /events/:id/reassign-venue - Campus Manager only. Moves an existing
+// booking to a different venue (e.g. to free up a higher-priority venue),
+// keeping the same date/time and approval state.
+async function reassignVenue(req, res) {
+  const venue = (req.body.venue || '').trim();
+  if (!venue) {
+    return res.status(400).json({ error: 'Validation failed', details: 'venue is required.' });
+  }
+
+  const event = await Event.findByPk(req.params.id);
+  if (!event) return res.status(404).json({ error: 'Not found', details: 'Event does not exist.' });
+
+  const venueExists = await Venue.findOne({ where: { name: venue } });
+  if (!venueExists) {
+    return res.status(400).json({ error: 'Validation failed', details: 'Selected venue is not recognized.' });
+  }
+  if (venue === event.venue) {
+    return res.status(400).json({ error: 'Validation failed', details: 'This booking is already at that venue.' });
+  }
+
+  const clashing = await findClashingEvent({
+    venue,
+    event_date: event.event_date,
+    start_time: event.start_time,
+    end_time: event.end_time,
+    excludeId: event.id,
+  });
+  if (clashing) {
+    return res.status(409).json({
+      error: 'Slot unavailable',
+      details: `${venue} is already booked during this time range - choose a different venue.`,
+    });
+  }
+
+  const previousVenue = event.venue;
+  await event.update({ venue });
+  const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
+  const serialized = serializeEvent(withCreator);
+  serialized.reassigned_from = previousVenue;
+  return res.json(serialized);
+}
+
+// PATCH /events/:id/reassign-slot - Campus Manager only. Allocates an event
+// to a different venue and/or date/time while preserving its approval state.
+async function reassignSlot(req, res) {
+  const { venue, event_date, start_time, end_time } = req.body;
+  if (!venue || !event_date || !start_time || !end_time) {
+    return res.status(400).json({ error: 'Validation failed', details: 'venue, event_date, start_time, and end_time are required.' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(event_date)) {
+    return res.status(400).json({ error: 'Validation failed', details: 'event_date must be in YYYY-MM-DD format.' });
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(start_time) || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(end_time)) {
+    return res.status(400).json({ error: 'Validation failed', details: 'start_time and end_time must be valid times.' });
+  }
+  if (start_time >= end_time || start_time < '09:00' || end_time > '16:00') {
+    return res.status(400).json({ error: 'Validation failed', details: 'Choose a slot between 9:00 AM and 4:00 PM.' });
+  }
+
+  const event = await Event.findByPk(req.params.id);
+  if (!event) return res.status(404).json({ error: 'Not found', details: 'Event does not exist.' });
+
+  const venueExists = await Venue.findOne({ where: { name: venue } });
+  if (!venueExists) return res.status(400).json({ error: 'Validation failed', details: 'Selected venue is not recognized.' });
+
+  const clashing = await findClashingEvent({ venue, event_date, start_time, end_time, excludeId: event.id });
+  if (clashing) {
+    return res.status(409).json({ error: 'Slot unavailable', details: `${venue} is already booked during this time range.` });
+  }
+
+  await event.update({ venue, event_date, start_time, end_time });
+  const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
+  return res.json(serializeEvent(withCreator));
+}
+
+// DELETE /events/:id - Campus Manager only. Permanently removes a booking,
+// unlike cancel which just marks it inactive and keeps the record.
 async function deleteEvent(req, res) {
   const event = await Event.findByPk(req.params.id);
   if (!event) return res.status(404).json({ error: 'Not found', details: 'Event does not exist.' });
@@ -239,8 +340,11 @@ module.exports = {
   cancelEvent,
   deleteEvent,
   listEvents,
+  listAvailability,
   getEvent,
   approveHod,
   approvePrincipal,
   approveCampusManager,
+  reassignVenue,
+  reassignSlot,
 };

@@ -5,7 +5,6 @@ export const DESIGNATION_LABELS = {
   hod: 'HOD',
   principal: 'Principal',
   campus_manager: 'Campus Manager',
-  admin: 'Admin',
 };
 
 export function designationLabel(designation) {
@@ -18,5 +17,4 @@ export const PORTAL_LABELS = {
   hod: 'HOD PORTAL',
   principal: 'PRINCIPAL PORTAL',
   campus_manager: 'CAMPUS MANAGER PORTAL',
-  admin: 'ADMIN PORTAL',
 };

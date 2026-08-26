@@ -5,6 +5,7 @@ import { logout } from '../services/authService';
 import { listEvents } from '../services/eventService';
 import { PORTAL_LABELS, designationLabel } from '../constants/roles';
 import { MenuIcon, BellIcon, ChevronDownIcon, LogoutIcon } from './icons/Icons';
+import collegeLogo from '../assets/image.png';
 
 function eventHasEnded(event) {
   return new Date(`${event.event_date}T${event.end_time}`) < new Date();
@@ -83,26 +84,26 @@ export default function Header({ onMenuClick }) {
           <MenuIcon className="w-6 h-6" />
         </button>
 
-        <Link to="/dashboard" className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-base shrink-0">
-            FXEC
+        <Link to="/dashboard" className="flex flex-1 items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden shrink-0" aria-hidden="true">
+            <img src={collegeLogo} alt="" className="h-10 sm:h-12 w-auto max-w-none" />
           </div>
-          <div className="leading-tight hidden sm:block">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-lg sm:text-xl text-slate-800">FRANCIS XAVIER</span>
-              <span className="text-[10px] bg-primary-light text-white font-medium px-2 py-0.5 rounded">AUTONOMOUS</span>
+          <div className="leading-tight min-w-0 overflow-hidden">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              <span className="font-bold text-xs sm:text-xl text-slate-800">FRANCIS XAVIER</span>
+              <span className="text-[8px] sm:text-[10px] bg-primary-light text-white font-medium px-1.5 sm:px-2 py-0.5 rounded">AUTONOMOUS</span>
             </div>
-            <div className="text-sm sm:text-base text-slate-400 tracking-wide">
-              ENGINEERING COLLEGE &bull; EVENT BOOKING 
+            <div className="text-[8px] sm:text-base text-slate-400 tracking-normal sm:tracking-wide whitespace-normal break-words">
+              ENGINEERING COLLEGE &bull; EVENT BOOKING
             </div>
           </div>
         </Link>
 
-        <div className="flex items-center gap-2 sm:gap-3 ml-auto shrink-0">
+        <div className="flex items-center gap-1 sm:gap-3 ml-auto shrink-0">
           <button
             type="button"
             onClick={() => navigate(notificationTarget)}
-            className="relative w-9 h-9 rounded-full bg-surface hover:bg-slate-200 flex items-center justify-center transition"
+            className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-surface hover:bg-slate-200 flex items-center justify-center transition shrink-0"
             title={isHod || isPrincipal || isCampusManager ? 'Approval requests' : 'Your pending bookings'}
           >
             <BellIcon className="w-5 h-5 text-slate-600" />
@@ -116,7 +117,7 @@ export default function Header({ onMenuClick }) {
           <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex items-center gap-2 bg-surface hover:bg-slate-200 rounded-lg px-2 sm:px-2.5 py-1.5 transition"
+              className="flex items-center gap-1 sm:gap-2 bg-surface hover:bg-slate-200 rounded-lg px-1 sm:px-2.5 py-1.5 transition shrink-0"
             >
               <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-semibold shrink-0">
                 {initial}

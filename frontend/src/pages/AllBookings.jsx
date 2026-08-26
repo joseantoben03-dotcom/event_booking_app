@@ -142,19 +142,19 @@ export default function AllBookings() {
         </button>
       </div>
 
-      <form onSubmit={submitSearch} className="mb-4 flex gap-2">
+      <form onSubmit={submitSearch} className="mb-4 flex gap-1 sm:gap-2">
         <div className="relative flex-1">
           <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search event, venue, organizer, or department..."
-            className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs sm:py-2.5 sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <button
           type="submit"
-          className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
+          className="bg-primary hover:bg-primary-dark text-white text-xs sm:text-sm font-medium rounded-lg px-2.5 py-2 sm:px-4 sm:py-2.5 transition"
         >
           Search
         </button>

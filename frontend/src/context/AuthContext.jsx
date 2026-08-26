@@ -40,8 +40,7 @@ export function AuthProvider({ children }) {
 
   // Role helpers used across the UI
   const designation = typeof user?.designation === 'string' ? user.designation.trim().toLowerCase() : null;
-  const isAdmin = designation === 'admin';
-  const isApOrHod = designation === 'ap' || designation === 'hod' || isAdmin;
+  const isApOrHod = designation === 'ap' || designation === 'hod' || designation === 'campus_manager';
   const isAp = designation === 'ap';
   const isHod = designation === 'hod';
   const isPrincipal = designation === 'principal';
@@ -60,7 +59,6 @@ export function AuthProvider({ children }) {
         isHod,
         isPrincipal,
         isCampusManager,
-        isAdmin,
       }}
     >
       {children}

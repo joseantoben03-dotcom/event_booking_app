@@ -8,7 +8,7 @@ import { listUsers } from '../services/userService';
 import { ShieldIcon, PlusIcon, XIcon } from '../components/icons/Icons';
 
 export default function Admin() {
-  const { isAdmin } = useAuth();
+  const { isCampusManager } = useAuth();
   const [venues, setVenues] = useState([]);
   const [venuesLoading, setVenuesLoading] = useState(true);
   const [newVenueName, setNewVenueName] = useState('');
@@ -48,11 +48,11 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isCampusManager) {
       loadVenues();
       loadEvents();
     }
-  }, [isAdmin, loadVenues, loadEvents]);
+  }, [isCampusManager, loadVenues, loadEvents]);
 
   async function handleAddVenue(e) {
     e.preventDefault();
@@ -136,15 +136,15 @@ export default function Admin() {
     setPendingAction({ type: 'booking', booking });
   }
 
-  if (!isAdmin) {
+  if (!isCampusManager) {
     return (
       <AppLayout>
         <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-card border border-slate-100 p-6 text-center">
           <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
             <ShieldIcon className="w-6 h-6" />
           </div>
-          <h1 className="text-lg font-bold text-slate-800 mb-1">Admin access required</h1>
-          <p className="text-sm text-slate-500">This page is only available to Admin accounts.</p>
+          <h1 className="text-lg font-bold text-slate-800 mb-1">Campus Manager access required</h1>
+          <p className="text-sm text-slate-500">This page is only available to Campus Manager accounts.</p>
         </div>
       </AppLayout>
     );
@@ -157,8 +157,8 @@ export default function Admin() {
           <ShieldIcon className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-slate-800">Admin</h1>
-          <p className="text-sm text-slate-500">Manage venues and directly override any booking's approval status.</p>
+          <h1 className="text-lg font-bold text-slate-800">Campus Manager</h1>
+          <p className="text-sm text-slate-500">Manage venues, approvals, bookings, and venue reassignment.</p>
         </div>
       </div>
 
@@ -260,7 +260,7 @@ export default function Admin() {
         <h2 className="text-sm font-bold text-slate-700 mb-3">All Bookings</h2>
         <p className="text-xs text-slate-400 mb-3">
           Open any booking to approve, reject, or override any step directly - regardless of sequence or department.
-          Admins can permanently delete any booking, including active or fully booked slots.
+          Campus Managers can permanently delete any booking, including active or fully booked slots.
         </p>
         <BookingsTable
           bookings={events}

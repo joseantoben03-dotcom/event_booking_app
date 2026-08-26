@@ -37,7 +37,7 @@ export default function CreateEvent() {
           </div>
           <h1 className="text-lg font-bold text-slate-800 mb-1">Booking not available for your role</h1>
           <p className="text-sm text-slate-500">
-            Only <strong>AP</strong> and <strong>HODs</strong> can submit venue booking requests. Your account is
+            APs and HODs submit requests; Campus Managers can book directly. Your account is
             registered as <strong>{user ? designationLabel(user.designation) : 'unknown'}</strong>,
             which reviews/approves bookings instead. Head to{' '}
             <Link to="/bookings" className="text-primary hover:underline">All Bookings</Link> to see and act on pending

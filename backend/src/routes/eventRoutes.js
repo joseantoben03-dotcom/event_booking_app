@@ -6,10 +6,13 @@ const {
   cancelEvent,
   deleteEvent,
   listEvents,
+  listAvailability,
   getEvent,
   approveHod,
   approvePrincipal,
   approveCampusManager,
+  reassignVenue,
+  reassignSlot,
 } = require('../controllers/eventController');
 const { ensureAuthenticated, requireRole } = require('../middleware/authMiddleware');
 const { Venue } = require('../models');
@@ -44,13 +47,15 @@ const eventValidation = [
 
 router.use(ensureAuthenticated);
 
-// Venue list - readable by anyone authenticated; mutations are admin-only.
+// Venue list - readable by anyone authenticated; mutations are Campus
+// Manager only (Campus Manager now holds all the rights the old Admin
+// role used to have).
 router.get('/venues', async (req, res) => {
   const venues = await Venue.findAll({ attributes: ['id', 'name'], order: [['id', 'ASC']] });
   res.json(venues.map((v) => ({ id: v.id, name: v.name })));
 });
 
-router.post('/venues', requireRole('admin'), async (req, res) => {
+router.post('/venues', requireRole('campus_manager'), async (req, res) => {
   const name = (req.body.name || '').trim();
   if (!name) return res.status(400).json({ error: 'Validation failed', details: 'Venue name is required.' });
   const existing = await Venue.findOne({ where: { name } });
@@ -59,7 +64,7 @@ router.post('/venues', requireRole('admin'), async (req, res) => {
   res.status(201).json({ id: venue.id, name: venue.name });
 });
 
-router.patch('/venues/:id', requireRole('admin'), async (req, res) => {
+router.patch('/venues/:id', requireRole('campus_manager'), async (req, res) => {
   const venue = await Venue.findByPk(req.params.id);
   if (!venue) return res.status(404).json({ error: 'Not found', details: 'Venue does not exist.' });
   const name = (req.body.name || '').trim();
@@ -68,7 +73,7 @@ router.patch('/venues/:id', requireRole('admin'), async (req, res) => {
   res.json({ id: venue.id, name: venue.name });
 });
 
-router.delete('/venues/:id', requireRole('admin'), async (req, res) => {
+router.delete('/venues/:id', requireRole('campus_manager'), async (req, res) => {
   const venue = await Venue.findByPk(req.params.id);
   if (!venue) return res.status(404).json({ error: 'Not found', details: 'Venue does not exist.' });
   try {
@@ -82,15 +87,21 @@ router.delete('/venues/:id', requireRole('admin'), async (req, res) => {
   }
 });
 
-router.post('/', requireRole('ap', 'hod', 'admin'), eventValidation, createEvent);
+// Must be registered before '/:id' so Express doesn't treat "availability"
+// as an :id value.
+router.get('/availability', listAvailability);
+
+router.post('/', requireRole('ap', 'hod', 'campus_manager'), eventValidation, createEvent);
 router.get('/', listEvents);
 router.get('/:id', getEvent);
 router.patch('/:id', eventValidation, updateEvent);
 router.patch('/:id/cancel', cancelEvent);
-router.delete('/:id', requireRole('admin'), deleteEvent);
+router.patch('/:id/reassign-venue', requireRole('campus_manager'), reassignVenue);
+router.patch('/:id/reassign-slot', requireRole('campus_manager'), reassignSlot);
+router.delete('/:id', requireRole('campus_manager'), deleteEvent);
 
-router.patch('/:id/approve-hod', requireRole('hod', 'admin'), approveHod);
-router.patch('/:id/approve-principal', requireRole('principal', 'admin'), approvePrincipal);
-router.patch('/:id/approve-campus-manager', requireRole('campus_manager', 'admin'), approveCampusManager);
+router.patch('/:id/approve-hod', requireRole('hod', 'campus_manager'), approveHod);
+router.patch('/:id/approve-principal', requireRole('principal', 'campus_manager'), approvePrincipal);
+router.patch('/:id/approve-campus-manager', requireRole('campus_manager'), approveCampusManager);
 
 module.exports = router;

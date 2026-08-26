@@ -4,7 +4,7 @@ const { ensureAuthenticated, requireRole } = require('../middleware/authMiddlewa
 
 const router = express.Router();
 
-router.use(ensureAuthenticated, requireRole('admin'));
+router.use(ensureAuthenticated, requireRole('campus_manager'));
 router.get('/', listUsers);
 router.get('/:id', getUser);
 

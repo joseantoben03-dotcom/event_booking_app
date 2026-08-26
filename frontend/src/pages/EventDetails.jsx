@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
-import { getEvent, approveHod, approvePrincipal, approveCampusManager, cancelEvent } from '../services/eventService';
+import { getEvent, approveHod, approvePrincipal, approveCampusManager, cancelEvent, listVenues, reassignSlot } from '../services/eventService';
 import { designationLabel } from '../constants/roles';
 import { CheckIcon, XIcon, ClockIcon, CheckCircleIcon } from '../components/icons/Icons';
 
@@ -29,6 +29,19 @@ function formatTime(timeStr) {
   return `${hour12}:${m} ${period}`;
 }
 
+function formatDateTime(dateTime, status) {
+  if (!dateTime) return status === 'pending' ? 'Pending' : 'Not recorded';
+  const date = new Date(dateTime);
+  if (Number.isNaN(date.getTime())) return 'Pending';
+  return date.toLocaleString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function StepPill({ label, value }) {
   const styles = {
     approved: 'bg-success-light text-success',
@@ -46,15 +59,47 @@ function StepPill({ label, value }) {
   );
 }
 
+function StatusTimeline({ event }) {
+  const steps = [
+    { label: 'Booking requested', timestamp: event.created_at, status: 'approved' },
+    { label: `HOD ${event.hod_approved}`, timestamp: event.hod_approved_at, status: event.hod_approved },
+    { label: `Principal ${event.principal_approved}`, timestamp: event.principal_approved_at, status: event.principal_approved },
+    { label: `Campus Manager ${event.campus_manager_approved}`, timestamp: event.campus_manager_approved_at, status: event.campus_manager_approved },
+  ];
+  if (event.is_cancelled) steps.push({ label: 'Booking cancelled', timestamp: event.cancelled_at, status: 'rejected' });
+
+  return (
+    <div className="mt-6 border-t border-slate-100 pt-5">
+      <h2 className="text-sm font-bold text-slate-700 mb-3">Booking Status History</h2>
+      <div className="space-y-3">
+        {steps.map((step) => (
+          <div key={step.label} className="flex items-center justify-between gap-4 text-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${step.status === 'approved' ? 'bg-success' : step.status === 'rejected' ? 'bg-danger' : 'bg-slate-300'}`} />
+              <span className="text-slate-700 capitalize">{step.label}</span>
+            </div>
+            <span className="text-xs text-slate-400 whitespace-nowrap">{formatDateTime(step.timestamp, step.status)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function EventDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isHod, isPrincipal, isCampusManager, isAdmin } = useAuth();
+  const { user, isHod, isPrincipal, isCampusManager } = useAuth();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [error, setError] = useState('');
   const [cancelPrompt, setCancelPrompt] = useState(false);
+  const [venues, setVenues] = useState([]);
+  const [selectedVenue, setSelectedVenue] = useState('');
+  const [allocatedDate, setAllocatedDate] = useState('');
+  const [allocatedStartTime, setAllocatedStartTime] = useState('');
+  const [allocatedEndTime, setAllocatedEndTime] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,6 +116,10 @@ export default function EventDetails() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (isCampusManager) listVenues().then(setVenues).catch(() => setVenues([]));
+  }, [isCampusManager]);
 
   async function act(fn, status) {
     setActing(true);
@@ -121,13 +170,13 @@ export default function EventDetails() {
 
   const isOwner = !!user && event.user_id === user.id;
   // Normal roles can only act on their own step, in sequence, within their
-  // department. Admins can override any of the three steps directly, at
+  // department. Campus managers can override any step directly, at
   // any time, regardless of sequence or department.
-  const canApproveHod = isAdmin || (isHod && event.hod_approved === 'pending' && event.creator?.department === user?.department);
+  const canApproveHod = isCampusManager || (isHod && event.hod_approved === 'pending' && event.creator?.department === user?.department);
   const canApprovePrincipal =
-    isAdmin || (isPrincipal && event.hod_approved === 'approved' && event.principal_approved === 'pending');
+    isCampusManager || (isPrincipal && event.hod_approved === 'approved' && event.principal_approved === 'pending');
   const canApproveCampusManager =
-    isAdmin ||
+    isCampusManager ||
     (isCampusManager &&
       event.hod_approved === 'approved' &&
       event.principal_approved === 'approved' &&
@@ -137,6 +186,24 @@ export default function EventDetails() {
   const hasNotHappenedYet = scheduledStart > new Date();
   const canCancel = isOwner && event.status !== 'Cancelled' && !event.status.startsWith('Rejected') && hasNotHappenedYet;
   const canEdit = isOwner && event.is_editable;
+
+  async function handleReassignSlot() {
+    if (!selectedVenue || !allocatedDate || !allocatedStartTime || !allocatedEndTime) return;
+    setActing(true);
+    setError('');
+    try {
+      setEvent(await reassignSlot(id, {
+        venue: selectedVenue,
+        event_date: allocatedDate,
+        start_time: allocatedStartTime,
+        end_time: allocatedEndTime,
+      }));
+    } catch (err) {
+      setError(err?.response?.data?.details || err?.response?.data?.error || 'Unable to allocate this slot.');
+    } finally {
+      setActing(false);
+    }
+  }
 
   return (
     <AppLayout>
@@ -169,6 +236,8 @@ export default function EventDetails() {
               <StepPill key={s.key} label={s.label} value={event[s.key]} />
             ))}
           </div>
+
+          <StatusTimeline event={event} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm border-t border-slate-100 pt-5">
             <div>
@@ -252,35 +321,47 @@ export default function EventDetails() {
 
           {(canApproveHod || canApprovePrincipal || canApproveCampusManager) && (
             <div className="mt-6 border-t border-slate-100 pt-5">
-              {isAdmin && (
+              {isCampusManager && (
                 <p className="text-xs text-slate-400 mb-3">
-                  Admin override: you can set any approval step directly, regardless of sequence or department.
+                  Campus Manager override: you can choose any approval step directly, regardless of sequence or department.
                 </p>
               )}
               <div className="flex flex-col sm:flex-row gap-3">
                 {canApproveHod && (
                   <>
-                    <button disabled={acting} onClick={() => act(approveHod, 'approved')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isAdmin ? 'bg-success-light text-success border border-success/20 hover:bg-success/10' : 'bg-success text-white'}`}>{isAdmin ? 'Set HOD: Approved' : 'Approve as HOD'}</button>
-                    <button disabled={acting} onClick={() => act(approveHod, 'rejected')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isAdmin ? 'bg-danger-light text-danger border border-danger/20 hover:bg-danger/10' : 'bg-danger text-white'}`}>{isAdmin ? 'Set HOD: Rejected' : 'Reject as HOD'}</button>
+                    <button disabled={acting} onClick={() => act(approveHod, 'approved')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-success-light text-success border border-success/20 hover:bg-success/10' : 'bg-success text-white'}`}>{isCampusManager ? 'HOD: Approved' : 'Approve as HOD'}</button>
+                    <button disabled={acting} onClick={() => act(approveHod, 'rejected')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-danger-light text-danger border border-danger/20 hover:bg-danger/10' : 'bg-danger text-white'}`}>{isCampusManager ? 'HOD: Rejected' : 'Reject as HOD'}</button>
                   </>
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-3 mt-3">
                 {canApprovePrincipal && (
                   <>
-                    <button disabled={acting} onClick={() => act(approvePrincipal, 'approved')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isAdmin ? 'bg-success-light text-success border border-success/20 hover:bg-success/10' : 'bg-success text-white'}`}>{isAdmin ? 'Set Principal: Approved' : 'Approve as Principal'}</button>
-                    <button disabled={acting} onClick={() => act(approvePrincipal, 'rejected')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isAdmin ? 'bg-danger-light text-danger border border-danger/20 hover:bg-danger/10' : 'bg-danger text-white'}`}>{isAdmin ? 'Set Principal: Rejected' : 'Reject as Principal'}</button>
+                    <button disabled={acting} onClick={() => act(approvePrincipal, 'approved')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-success-light text-success border border-success/20 hover:bg-success/10' : 'bg-success text-white'}`}>{isCampusManager ? 'Principal: Approved' : 'Approve as Principal'}</button>
+                    <button disabled={acting} onClick={() => act(approvePrincipal, 'rejected')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-danger-light text-danger border border-danger/20 hover:bg-danger/10' : 'bg-danger text-white'}`}>{isCampusManager ? 'Principal: Rejected' : 'Reject as Principal'}</button>
                   </>
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-3 mt-3">
                 {canApproveCampusManager && (
                   <>
-                    <button disabled={acting} onClick={() => act(approveCampusManager, 'approved')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isAdmin ? 'bg-success-light text-success border border-success/20 hover:bg-success/10' : 'bg-success text-white'}`}>{isAdmin ? 'Set Campus Manager: Approved' : 'Approve as Campus Manager'}</button>
-                    <button disabled={acting} onClick={() => act(approveCampusManager, 'rejected')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isAdmin ? 'bg-danger-light text-danger border border-danger/20 hover:bg-danger/10' : 'bg-danger text-white'}`}>{isAdmin ? 'Set Campus Manager: Rejected' : 'Reject as Campus Manager'}</button>
+                    <button disabled={acting} onClick={() => act(approveCampusManager, 'approved')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-success-light text-success border border-success/20 hover:bg-success/10' : 'bg-success text-white'}`}>{isCampusManager ? 'Campus Manager: Approved' : 'Approve as Campus Manager'}</button>
+                    <button disabled={acting} onClick={() => act(approveCampusManager, 'rejected')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-danger-light text-danger border border-danger/20 hover:bg-danger/10' : 'bg-danger text-white'}`}>{isCampusManager ? 'Campus Manager: Rejected' : 'Reject as Campus Manager'}</button>
                   </>
                 )}
               </div>
+              {isCampusManager && (
+                <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                  <select value={selectedVenue} onChange={(e) => setSelectedVenue(e.target.value)} className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select venue...</option>
+                    {venues.map((venue) => <option key={venue.id} value={venue.name}>{venue.name}</option>)}
+                  </select>
+                  <input type="date" value={allocatedDate} onChange={(e) => setAllocatedDate(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm" aria-label="Allocated date" />
+                  <input type="time" value={allocatedStartTime} onChange={(e) => setAllocatedStartTime(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm" aria-label="Allocated start time" />
+                  <input type="time" value={allocatedEndTime} onChange={(e) => setAllocatedEndTime(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm" aria-label="Allocated end time" />
+                  <button disabled={acting || !selectedVenue || !allocatedDate || !allocatedStartTime || !allocatedEndTime} onClick={handleReassignSlot} className="bg-primary text-white text-sm font-medium rounded-lg px-4 py-2.5 disabled:opacity-60">Allocate Slot</button>
+                </div>
+              )}
             </div>
           )}
         </div>

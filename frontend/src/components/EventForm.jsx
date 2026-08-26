@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { withVenueStyle } from '../constants/venueStyles';
 import VenueCard from './VenueCard';
-import { listEvents, listVenues } from '../services/eventService';
+import { listAvailability, listVenues } from '../services/eventService';
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -85,10 +85,9 @@ export default function EventForm({ onSubmit, submitting, initialVenue, initialD
     }
     setCheckingSlots(true);
     try {
-      const events = await listEvents({ venue: form.venue, event_date: form.event_date });
+      const events = await listAvailability({ venue: form.venue, event_date: form.event_date });
       setBookedRanges(
         events
-          .filter((e) => !e.status.startsWith('Rejected') && e.status !== 'Cancelled')
           .filter((e) => !isEditing || e.id !== initialData.id)
           .map((e) => ({ start: e.start_time?.slice(0, 5), end: e.end_time?.slice(0, 5) }))
           .filter((range) => range.start && range.end)

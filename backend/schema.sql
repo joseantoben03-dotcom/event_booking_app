@@ -17,7 +17,7 @@ CREATE TABLE users (
   name VARCHAR(150) NOT NULL,
   email VARCHAR(150) NOT NULL UNIQUE,
   contactno VARCHAR(20) NULL,
-  designation ENUM('ap', 'hod', 'principal', 'campus_manager', 'admin') NOT NULL,
+  designation ENUM('ap', 'hod', 'principal', 'campus_manager') NOT NULL,
   department VARCHAR(100) NOT NULL,
   google_id VARCHAR(100) NULL UNIQUE,
   avatar_url TEXT NULL,
@@ -41,7 +41,11 @@ CREATE TABLE events (
   hod_approved ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
   principal_approved ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
   campus_manager_approved ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  hod_approved_at TIMESTAMP NULL,
+  principal_approved_at TIMESTAMP NULL,
+  campus_manager_approved_at TIMESTAMP NULL,
   is_cancelled TINYINT(1) NOT NULL DEFAULT 0,
+  cancelled_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -53,7 +57,6 @@ CREATE INDEX idx_events_slot ON events(venue, event_date, start_time, end_time);
 
 -- Sample users (placeholder emails - replace with real institutional emails)
 INSERT INTO users (name, email, contactno, designation, department) VALUES
-('System Admin', 'admin@francisxavier.ac.in', '9000000000', 'admin', 'Administration'),
 ('Dr. Mary Joseph', 'mary.joseph@francisxavier.ac.in', '9000000001', 'campus_manager', 'Administration'),
 ('Dr. Arun Kumar', 'arun.principal@francisxavier.ac.in', '9000000002', 'principal', 'Administration'),
 ('Prof. Latha Menon', 'latha.hod@francisxavier.ac.in', '9000000003', 'hod', 'Computer Science and Engineering'),

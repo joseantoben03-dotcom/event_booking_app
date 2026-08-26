@@ -11,7 +11,7 @@ User.init(
     email: { type: DataTypes.STRING(150), allowNull: false, unique: true, validate: { isEmail: true } },
     contactno: { type: DataTypes.STRING(20), allowNull: true },
     designation: {
-      type: DataTypes.ENUM('ap', 'hod', 'principal', 'campus_manager', 'admin'),
+      type: DataTypes.ENUM('ap', 'hod', 'principal', 'campus_manager'),
       allowNull: false,
     },
     department: { type: DataTypes.STRING(100), allowNull: false },

@@ -19,6 +19,19 @@ function formatTime(timeStr) {
   return `${hour12}:${m} ${period}`;
 }
 
+function formatDateTime(dateTime) {
+  if (!dateTime) return null;
+  const date = new Date(dateTime);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export default function BookingsTable({ bookings, loading, emptyMessage, onDelete }) {
   if (loading) {
     return <div className="text-slate-500 text-sm py-8 text-center">Loading bookings...</div>;
@@ -44,6 +57,7 @@ export default function BookingsTable({ bookings, loading, emptyMessage, onDelet
             <th className="text-left px-4 py-3 font-medium">Requested By</th>
             <th className="text-left px-4 py-3 font-medium">Mobile</th>
             <th className="text-left px-4 py-3 font-medium">Status</th>
+            <th className="text-left px-4 py-3 font-medium">Activity</th>
             <th className="px-4 py-3"></th>
           </tr>
         </thead>
@@ -61,6 +75,13 @@ export default function BookingsTable({ bookings, loading, emptyMessage, onDelet
               <td className="px-4 py-3 text-slate-600">{b.creator?.contactno || '-'}</td>
               <td className="px-4 py-3">
                 <StatusBadge status={b.status} />
+              </td>
+              <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                <div>Booked: {formatDateTime(b.created_at) || '-'}</div>
+                {b.hod_approved_at && <div>HOD: {formatDateTime(b.hod_approved_at)}</div>}
+                {b.principal_approved_at && <div>Principal: {formatDateTime(b.principal_approved_at)}</div>}
+                {b.campus_manager_approved_at && <div>Campus Manager: {formatDateTime(b.campus_manager_approved_at)}</div>}
+                {b.cancelled_at && <div>Cancelled: {formatDateTime(b.cancelled_at)}</div>}
               </td>
               <td className="px-4 py-3 text-right">
                 <div className="flex items-center justify-end gap-3">

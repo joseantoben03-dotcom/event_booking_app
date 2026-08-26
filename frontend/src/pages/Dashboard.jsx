@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import EventCard from '../components/EventCard';
 import { useAuth } from '../context/AuthContext';
-import { listEvents, listVenues } from '../services/eventService';
+import { listEvents, listVenues, approveCampusManager } from '../services/eventService';
 import { withVenueStyle } from '../constants/venueStyles';
 import { COLOR_STYLES } from '../constants/colors';
 import { TicketIcon, ClipboardListIcon, ClockIcon, CheckCircleIcon } from '../components/icons/Icons';
@@ -22,6 +22,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [venues, setVenues] = useState([]);
   const [venuesLoading, setVenuesLoading] = useState(true);
+  const [actingEventId, setActingEventId] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +71,16 @@ export default function Dashboard() {
     [events]
   );
 
+  const approvedBookings = useMemo(
+    () => events.filter((event) => event.status === 'Fully approved'),
+    [events]
+  );
+
+  const myRequestEvents = useMemo(
+    () => events.filter((event) => user && event.user_id === user.id).slice(0, 6),
+    [events, user]
+  );
+
   // For HOD, approval requests are scoped to their own department - AP/HOD
   // requests only ever need sign-off from the HOD of the same department.
   const pendingMyActionEvents = useMemo(() => {
@@ -108,9 +120,22 @@ export default function Dashboard() {
   }, [events]);
 
   const todaysBookings = useMemo(
-    () => events.filter((e) => e.event_date === todayISO() && !e.is_cancelled && !e.status.startsWith('Rejected')),
+    () => events.filter((e) => e.event_date === todayISO() && e.status === 'Fully approved'),
     [events]
   );
+
+  async function decideCampusManager(eventId, status) {
+    setActingEventId(eventId);
+    setActionError('');
+    try {
+      const updated = await approveCampusManager(eventId, status);
+      setEvents((current) => current.map((event) => (event.id === updated.id ? updated : event)));
+    } catch (err) {
+      setActionError(err?.response?.data?.details || err?.response?.data?.error || 'Unable to update approval.');
+    } finally {
+      setActingEventId(null);
+    }
+  }
 
   return (
     <AppLayout>
@@ -180,7 +205,21 @@ export default function Dashboard() {
           <div className="text-xs text-primary font-medium mt-2">View all &rarr;</div>
         </Link>
 
-        {pendingMyActionCount > 0 ? (
+        {isCampusManager ? (
+          <Link
+            to="/bookings?status=fully_approved"
+            className="bg-white rounded-xl border border-emerald-100 shadow-card p-5 hover:border-emerald-300 hover:shadow-md transition sm:col-span-2 xl:col-span-1"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Approved Bookings</span>
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${COLOR_STYLES.emerald.bg} ${COLOR_STYLES.emerald.text}`}>
+                <CheckCircleIcon className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{loading ? '-' : approvedBookings.length}</div>
+            <div className="text-xs text-primary font-medium mt-2">Allocate slots &rarr;</div>
+          </Link>
+        ) : pendingMyActionCount > 0 ? (
           <Link
             to={pendingStatus ? `/bookings?status=${pendingStatus}` : '/bookings'}
             className="bg-white rounded-xl border border-amber-100 shadow-card p-5 hover:shadow-md transition sm:col-span-2 xl:col-span-1"
@@ -216,17 +255,25 @@ export default function Dashboard() {
         <section className="mb-8">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-sm font-bold text-slate-700">
-              Requests Awaiting Your Approval
+              {isCampusManager ? 'Requests Awaiting Campus Manager Approval' : 'Requests Awaiting Your Approval'}
               {isHod && user?.department && <span className="text-slate-400 font-normal"> &mdash; {user.department}</span>}
             </h2>
             <Link to={`/bookings?status=${pendingStatus}`} className="text-xs text-primary font-medium hover:underline">
               View all &rarr;
             </Link>
           </div>
+          {actionError && <div className="bg-danger-light text-danger text-sm rounded-lg px-4 py-2 mb-4">{actionError}</div>}
           {pendingMyActionEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {pendingMyActionEvents.slice(0, 6).map((event) => (
-                <EventCard key={event.id} event={event} />
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onApprove={isCampusManager ? () => decideCampusManager(event.id, 'approved') : undefined}
+                  onReject={isCampusManager ? () => decideCampusManager(event.id, 'rejected') : undefined}
+                  actionDisabled={actingEventId === event.id}
+                  detailsLabel={isCampusManager ? 'Allocate slot before approval' : 'View details'}
+                />
               ))}
             </div>
           ) : (
@@ -234,6 +281,22 @@ export default function Dashboard() {
               No requests are waiting for your approval.
             </div>
           )}
+        </section>
+      )}
+
+      {myRequestEvents.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-sm font-bold text-slate-700">My Recent Requests</h2>
+            <Link to="/my-bookings" className="text-xs text-primary font-medium hover:underline">
+              View all &rarr;
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {myRequestEvents.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
         </section>
       )}
 

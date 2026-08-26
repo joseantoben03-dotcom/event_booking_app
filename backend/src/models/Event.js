@@ -35,7 +35,11 @@ Event.init(
       allowNull: false,
       defaultValue: 'pending',
     },
+    hod_approved_at: { type: DataTypes.DATE, allowNull: true },
+    principal_approved_at: { type: DataTypes.DATE, allowNull: true },
+    campus_manager_approved_at: { type: DataTypes.DATE, allowNull: true },
     is_cancelled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    cancelled_at: { type: DataTypes.DATE, allowNull: true },
   },
   {
     sequelize,

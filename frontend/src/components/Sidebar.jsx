@@ -28,12 +28,12 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ mobileOpen, onClose }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isCampusManager } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const portalLabel = user ? PORTAL_LABELS[user.designation] || 'PORTAL' : 'PORTAL';
-  const navItems = isAdmin
-    ? [...NAV_ITEMS, { to: '/admin', icon: ShieldIcon, label: 'Admin' }]
+  const navItems = isCampusManager
+    ? [...NAV_ITEMS, { to: '/admin', icon: ShieldIcon, label: 'Campus Manager' }]
     : NAV_ITEMS;
 
   return (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import LoginButton from '../components/LoginButton';
+import collegeLogo from '../assets/image.png';
 
 export default function Login() {
   const [params] = useSearchParams();
@@ -10,8 +11,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-surface px-4">
       <div className="w-full max-w-3xl ">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-lg shadow-card">
-            FXEC
+          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-card" aria-hidden="true">
+            <img src={collegeLogo} alt="" className="h-20 w-auto max-w-none" />
           </div>
           <h1 className="mt-4 text-xl font-bold text-slate-800 text-center">
             FRANCIS XAVIER ENGINEERING COLLEGE
