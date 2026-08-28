@@ -5,6 +5,11 @@ function hasEnded(event) {
   return new Date(`${event.event_date}T${event.end_time}`) <= new Date();
 }
 
+function hasStarted(eventDate, startTime) {
+  if (!eventDate || !startTime) return false;
+  return new Date(`${eventDate}T${startTime}`) <= new Date();
+}
+
 function computeStatus(event) {
   const { hod_approved, principal_approved, campus_manager_approved, is_cancelled } = event;
 
@@ -75,4 +80,4 @@ function serializeEvent(eventInstance) {
   };
 }
 
-module.exports = { computeStatus, isSlotFree, isFullyPending, serializeEvent };
+module.exports = { computeStatus, isSlotFree, isFullyPending, hasStarted, serializeEvent };

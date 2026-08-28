@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { Event, User, Venue } = require('../models');
-const { serializeEvent, computeStatus, isSlotFree, isFullyPending } = require('../services/eventService');
+const { serializeEvent, computeStatus, isSlotFree, isFullyPending, hasStarted } = require('../services/eventService');
 
 function normalizedDesignation(user) {
   return typeof user.designation === 'string' ? user.designation.trim().toLowerCase() : '';
@@ -49,6 +49,9 @@ async function createEvent(req, res) {
   }
   if (start_time < '09:00') {
     return res.status(400).json({ error: 'Validation failed', details: 'Bookings cannot start before 9:00 AM.' });
+  }
+  if (hasStarted(event_date, start_time)) {
+    return res.status(400).json({ error: 'Booking expired', details: 'Bookings cannot be created for a date or time that has already passed.' });
   }
 
   const clashing = await findClashingEvent({ venue, event_date, start_time, end_time });
@@ -116,6 +119,9 @@ async function updateEvent(req, res) {
   }
   if (start_time < '09:00') {
     return res.status(400).json({ error: 'Validation failed', details: 'Bookings cannot start before 9:00 AM.' });
+  }
+  if (hasStarted(event_date, start_time)) {
+    return res.status(400).json({ error: 'Booking expired', details: 'Bookings cannot be moved to a date or time that has already passed.' });
   }
 
   const clashing = await findClashingEvent({ venue, event_date, start_time, end_time, excludeId: event.id });
@@ -307,6 +313,9 @@ async function reassignSlot(req, res) {
   }
   if (start_time >= end_time || start_time < '09:00' || end_time > '16:00') {
     return res.status(400).json({ error: 'Validation failed', details: 'Choose a slot between 9:00 AM and 4:00 PM.' });
+  }
+  if (hasStarted(event_date, start_time)) {
+    return res.status(400).json({ error: 'Booking expired', details: 'Bookings cannot be moved to a date or time that has already passed.' });
   }
 
   const event = await Event.findByPk(req.params.id);

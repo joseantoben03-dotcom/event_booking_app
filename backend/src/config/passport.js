@@ -26,6 +26,11 @@ passport.use(
           return done(null, false, { message: 'NOT_REGISTERED', email });
         }
 
+        const linkedUser = await User.findOne({ where: { google_id: profile.id } });
+        if (linkedUser && linkedUser.id !== user.id) {
+          return done(null, false, { message: 'GOOGLE_ID_ALREADY_LINKED' });
+        }
+
         const updates = {};
         if (!user.google_id) updates.google_id = profile.id;
         if (profile.displayName && profile.displayName !== user.name) updates.name = user.name; // keep institutional name
@@ -33,11 +38,20 @@ passport.use(
           updates.avatar_url = profile.photos[0].value;
         }
         if (Object.keys(updates).length > 0) {
-          await user.update(updates);
+          await user.update(updates, { fields: Object.keys(updates) });
         }
 
         return done(null, user);
       } catch (err) {
+        console.error('Google OAuth user update failed:', {
+          name: err.name,
+          message: err.message,
+          fields: err.errors && err.errors.map((item) => item.path),
+          databaseMessage: err.parent && err.parent.sqlMessage,
+        });
+        if (err.name === 'SequelizeUniqueConstraintError') {
+          return done(null, false, { message: 'GOOGLE_ID_ALREADY_LINKED' });
+        }
         return done(err);
       }
     }

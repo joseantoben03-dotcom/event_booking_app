@@ -7,6 +7,10 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function hasStarted(eventDate, startTime) {
+  return eventDate && startTime && new Date(`${eventDate}T${startTime}`) <= new Date();
+}
+
 function formatTime(time) {
   const [hours, minutes] = time.split(':');
   const hour = Number(hours);
@@ -134,6 +138,10 @@ export default function EventForm({ onSubmit, submitting, initialVenue, initialD
       setError('End time must be later than start time.');
       return;
     }
+    if (hasStarted(form.event_date, form.start_time)) {
+      setError('Bookings cannot be made for a date or time that has already passed.');
+      return;
+    }
     if (bookedRanges.some((range) => range.start < form.end_time && range.end > form.start_time)) {
       setError('This venue is already booked during the selected time range.');
       return;
@@ -216,7 +224,8 @@ export default function EventForm({ onSubmit, submitting, initialVenue, initialD
                     <option value="">Select start time</option>
                     {TIME_OPTIONS.slice(0, -1).map((time) => {
                       const isBooked = bookedRanges.some((range) => time >= range.start && time < range.end);
-                      return <option key={time} value={time} disabled={isBooked}>{formatTime(time)}{isBooked ? ' - Booked' : ''}</option>;
+                      const isPast = hasStarted(form.event_date, time);
+                      return <option key={time} value={time} disabled={isBooked || isPast}>{formatTime(time)}{isBooked ? ' - Booked' : isPast ? ' - Passed' : ''}</option>;
                     })}
                   </select>
                 </div>
