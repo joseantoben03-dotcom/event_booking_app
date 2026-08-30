@@ -22,11 +22,11 @@ app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 app.use(passport.initialize());
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get(['/health', '/api/health'], (req, res) => res.json({ status: 'ok' }));
 
-app.use('/auth', authRoutes);
-app.use('/events', eventRoutes);
-app.use('/users', userRoutes);
+app.use(['/auth', '/api/auth'], authRoutes);
+app.use(['/events', '/api/events'], eventRoutes);
+app.use(['/users', '/api/users'], userRoutes);
 
 // 404
 app.use((req, res) => {
