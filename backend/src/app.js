@@ -22,6 +22,10 @@ app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 app.use(passport.initialize());
 
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'FX Event Management API is running' });
+});
+
 app.get(['/health', '/api/health'], (req, res) => res.json({ status: 'ok' }));
 
 app.use(['/auth', '/api/auth'], authRoutes);
