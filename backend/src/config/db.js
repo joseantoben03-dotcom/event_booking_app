@@ -18,6 +18,13 @@ const sequelize = new Sequelize(
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },
+    pool: {
+      max: 2,       // Clever Cloud dev plan caps total connections at 5 — keep each
+                     // serverless instance's pool small so concurrent invocations don't exceed it
+      min: 0,
+      acquire: 10000,
+      idle: 5000,    // release idle connections quickly instead of holding them open
+    },
   }
 );
 
