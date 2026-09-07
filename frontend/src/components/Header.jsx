@@ -67,7 +67,7 @@ export default function Header({ onMenuClick }) {
         </button>
 
         <Link to="/dashboard" className="flex flex-1 items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden shrink-0" aria-hidden="true">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden shrink-0 md:hidden" aria-hidden="true">
             <img src={collegeLogo} alt="" className="h-10 sm:h-12 w-auto max-w-none" />
           </div>
           <div className="leading-tight min-w-0 overflow-hidden">
