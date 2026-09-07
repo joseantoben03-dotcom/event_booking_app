@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import collegeLogo from '../assets/images (1).jpg';
 import {
   HomeIcon,
   BuildingIcon,
@@ -28,7 +27,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ mobileOpen, onClose }) {
-  const { user, isCampusManager } = useAuth();
+  const { isCampusManager } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = isCampusManager
@@ -51,13 +50,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
         `}
       >
-        <div className="px-4 py-4 border-b border-slate-100 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {!collapsed && (
-              <img src={collegeLogo} alt="Francis Xavier Engineering College" className="w-full max-h-16 object-contain object-left" />
-            )}
-          </div>
-          <button onClick={onClose} className="md:hidden text-slate-400 hover:text-slate-700 shrink-0">
+        <div className="h-12 px-4 flex items-center justify-end md:hidden">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 shrink-0">
             <XIcon className="w-5 h-5" />
           </button>
         </div>

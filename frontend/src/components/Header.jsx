@@ -66,19 +66,8 @@ export default function Header({ onMenuClick }) {
           <MenuIcon className="w-6 h-6" />
         </button>
 
-        <Link to="/dashboard" className="flex flex-1 items-center gap-2 sm:gap-3 min-w-0 md:hidden">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden shrink-0" aria-hidden="true">
-            <img src={collegeLogo} alt="" className="h-10 sm:h-12 w-auto max-w-none" />
-          </div>
-          <div className="leading-tight min-w-0 overflow-hidden">
-            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-              <span className="font-bold text-xs sm:text-xl text-slate-800">FRANCIS XAVIER</span>
-              <span className="text-[8px] sm:text-[10px] bg-primary-light text-white font-medium px-1.5 sm:px-2 py-0.5 rounded">AUTONOMOUS</span>
-            </div>
-            <div className="text-[8px] sm:text-base text-slate-400 tracking-normal sm:tracking-wide whitespace-normal break-words">
-              ENGINEERING COLLEGE &bull; EVENT BOOKING
-            </div>
-          </div>
+        <Link to="/dashboard" className="flex flex-1 items-center min-w-0">
+          <img src={collegeLogo} alt="Francis Xavier Engineering College" className="w-48 sm:w-64 max-w-full max-h-14 h-auto object-contain object-left" />
         </Link>
 
         <div className="flex items-center gap-1 sm:gap-3 ml-auto shrink-0">
