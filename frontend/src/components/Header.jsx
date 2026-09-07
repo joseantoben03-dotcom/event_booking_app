@@ -2,14 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { logout } from '../services/authService';
-import { listEvents } from '../services/eventService';
+import { listNotifications, markNotificationsRead } from '../services/eventService';
 import { PORTAL_LABELS, designationLabel } from '../constants/roles';
 import { MenuIcon, BellIcon, ChevronDownIcon, LogoutIcon } from './icons/Icons';
 import collegeLogo from '../assets/image.png';
-
-function eventHasEnded(event) {
-  return new Date(`${event.event_date}T${event.end_time}`) < new Date();
-}
 
 export default function Header({ onMenuClick }) {
   const { user, clearSession, isHod, isPrincipal, isCampusManager } = useAuth();
@@ -21,23 +17,9 @@ export default function Header({ onMenuClick }) {
     let cancelled = false;
     async function loadCount() {
       try {
-        const events = await listEvents();
+        const notifications = await listNotifications();
         if (cancelled) return;
-        const activeEvents = events.filter((event) => !eventHasEnded(event));
-        let count = 0;
-        if (isHod)
-          count = activeEvents.filter(
-            (e) => e.hod_approved === 'pending' && !e.is_cancelled && e.creator?.department === user.department
-          ).length;
-        else if (isPrincipal)
-          count = activeEvents.filter((e) => e.hod_approved === 'approved' && e.principal_approved === 'pending' && !e.is_cancelled).length;
-        else if (isCampusManager)
-          count = activeEvents.filter(
-            (e) => e.hod_approved === 'approved' && e.principal_approved === 'approved' && e.campus_manager_approved === 'pending' && !e.is_cancelled
-          ).length;
-        else if (user)
-          count = activeEvents.filter((e) => e.user_id === user.id && e.status !== 'Fully approved' && !e.status.startsWith('Rejected') && e.status !== 'Cancelled').length;
-        setPendingCount(count);
+        setPendingCount(notifications.length);
       } catch {
         // notification count is best-effort; ignore failures silently
       }
@@ -55,7 +37,7 @@ export default function Header({ onMenuClick }) {
       window.clearInterval(refreshTimer);
       window.removeEventListener('focus', loadCount);
     };
-  }, [user, isHod, isPrincipal, isCampusManager]);
+  }, [user]);
 
   async function handleLogout() {
     await logout();
@@ -102,7 +84,11 @@ export default function Header({ onMenuClick }) {
         <div className="flex items-center gap-1 sm:gap-3 ml-auto shrink-0">
           <button
             type="button"
-            onClick={() => navigate(notificationTarget)}
+            onClick={async () => {
+              setPendingCount(0);
+              await markNotificationsRead();
+              navigate(notificationTarget);
+            }}
             className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-surface hover:bg-slate-200 flex items-center justify-center transition shrink-0"
             title={isHod || isPrincipal || isCampusManager ? 'Approval requests' : 'Your pending bookings'}
           >

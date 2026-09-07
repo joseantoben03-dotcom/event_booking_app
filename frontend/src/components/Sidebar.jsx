@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { PORTAL_LABELS } from '../constants/roles';
+import collegeLogo from '../assets/images (1).jpg';
 import {
   HomeIcon,
   BuildingIcon,
@@ -31,7 +31,6 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const { user, isCampusManager } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-  const portalLabel = user ? PORTAL_LABELS[user.designation] || 'PORTAL' : 'PORTAL';
   const navItems = isCampusManager
     ? [...NAV_ITEMS, { to: '/admin', icon: ShieldIcon, label: 'Campus Manager' }]
     : NAV_ITEMS;
@@ -54,9 +53,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
       >
         <div className="px-4 py-4 border-b border-slate-100 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-success shrink-0" />
             {!collapsed && (
-              <span className="text-xs font-bold text-slate-500 tracking-wide truncate">{portalLabel}</span>
+              <img src={collegeLogo} alt="Francis Xavier Engineering College" className="w-full max-h-16 object-contain object-left" />
             )}
           </div>
           <button onClick={onClose} className="md:hidden text-slate-400 hover:text-slate-700 shrink-0">

@@ -329,8 +329,8 @@ export default function EventDetails() {
               <div className="flex flex-col sm:flex-row gap-3">
                 {canApproveHod && (
                   <>
-                    <button disabled={acting} onClick={() => act(approveHod, 'approved')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-success-light text-success border border-success/20 hover:bg-success/10' : 'bg-success text-white'}`}>{isCampusManager ? 'HOD: Approved' : 'Approve as HOD'}</button>
-                    <button disabled={acting} onClick={() => act(approveHod, 'rejected')} className={`flex-1 text-sm font-medium rounded-lg py-2.5 disabled:opacity-60 ${isCampusManager ? 'bg-danger-light text-danger border border-danger/20 hover:bg-danger/10' : 'bg-danger text-white'}`}>{isCampusManager ? 'HOD: Rejected' : 'Reject as HOD'}</button>
+                    <button disabled={acting} onClick={() => act(approveHod, 'approved')} className="flex-1 text-sm font-medium rounded-lg py-2.5 bg-success-light text-success border border-success/20 hover:bg-success/10 disabled:opacity-60">{isCampusManager ? 'HOD: Approved' : 'Approve as HOD'}</button>
+                    <button disabled={acting} onClick={() => act(approveHod, 'rejected')} className="flex-1 text-sm font-medium rounded-lg py-2.5 bg-danger-light text-danger border border-danger/20 hover:bg-danger/10 disabled:opacity-60">{isCampusManager ? 'HOD: Rejected' : 'Reject as HOD'}</button>
                   </>
                 )}
               </div>

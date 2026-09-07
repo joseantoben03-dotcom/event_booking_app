@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const { Event, User, Venue } = require('../models');
 const { serializeEvent, computeStatus, isSlotFree, isFullyPending, hasStarted } = require('../services/eventService');
+const { notifyUsers, notifyRole } = require('../services/notificationService');
 
 function normalizedDesignation(user) {
   return typeof user.designation === 'string' ? user.designation.trim().toLowerCase() : '';
@@ -88,6 +89,13 @@ async function createEvent(req, res) {
   });
 
   const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
+  if (!requesterIsCampusManager) {
+    if (isHod) {
+      await notifyRole({ designation: 'principal', eventId: event.id, type: 'new_booking', message: `New booking requires Principal approval: ${event_name}` });
+    } else {
+      await notifyRole({ designation: 'hod', department: creator.department, eventId: event.id, type: 'new_booking', message: `New booking requires HOD approval: ${event_name}` });
+    }
+  }
   return res.status(201).json(serializeEvent(withCreator));
 }
 
@@ -233,6 +241,15 @@ async function approveHod(req, res) {
   }
 
   await event.update({ hod_approved: status, hod_approved_at: new Date() });
+  await notifyUsers({
+    recipientIds: [event.user_id],
+    eventId: event.id,
+    type: 'approval_update',
+    message: `HOD ${status} your booking: ${event.event_name}`,
+  });
+  if (status === 'approved') {
+    await notifyRole({ designation: 'principal', eventId: event.id, type: 'new_booking', message: `Booking requires Principal approval: ${event.event_name}` });
+  }
   const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
   return res.json(serializeEvent(withCreator));
 }
@@ -248,6 +265,16 @@ function makeApprovalHandler(field) {
     if (!event) return res.status(404).json({ error: 'Not found', details: 'Event does not exist.' });
 
     await event.update({ [field]: status, [`${field}_at`]: new Date() });
+    const approvalLabel = field === 'principal_approved' ? 'Principal' : 'Campus Manager';
+    await notifyUsers({
+      recipientIds: [event.user_id],
+      eventId: event.id,
+      type: 'approval_update',
+      message: `${approvalLabel} ${status} your booking: ${event.event_name}`,
+    });
+    if (field === 'principal_approved' && status === 'approved') {
+      await notifyRole({ designation: 'campus_manager', eventId: event.id, type: 'new_booking', message: `Booking requires Campus Manager approval: ${event.event_name}` });
+    }
     const withCreator = await Event.findByPk(event.id, { include: { model: User, as: 'creator' } });
     return res.json(serializeEvent(withCreator));
   };

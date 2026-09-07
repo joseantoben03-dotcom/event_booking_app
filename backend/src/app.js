@@ -8,6 +8,7 @@ const passport = require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const userRoutes = require('./routes/userRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.get(['/health', '/api/health'], (req, res) => res.json({ status: 'ok' }));
 app.use(['/auth', '/api/auth'], authRoutes);
 app.use(['/events', '/api/events'], eventRoutes);
 app.use(['/users', '/api/users'], userRoutes);
+app.use(['/notifications', '/api/notifications'], notificationRoutes);
 
 // 404
 app.use((req, res) => {

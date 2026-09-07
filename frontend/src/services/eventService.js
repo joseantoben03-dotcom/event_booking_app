@@ -45,6 +45,16 @@ export async function listEvents(params = {}) {
   return res.data;
 }
 
+export async function listNotifications() {
+  const res = await api.get('/notifications');
+  return res.data;
+}
+
+export async function markNotificationsRead() {
+  const res = await api.patch('/notifications/read');
+  return res.data;
+}
+
 export async function listAvailability(params = {}) {
   const res = await api.get('/events/availability', { params });
   return res.data;
