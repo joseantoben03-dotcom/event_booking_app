@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import LoginButton from '../components/LoginButton';
-import collegeLogo from '../assets/image.png';
+import collegeLogo from '../assets/images (1).jpg';
 
 export default function Login() {
   const [params] = useSearchParams();
@@ -9,21 +9,12 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface px-4">
-      <div className="w-full max-w-3xl ">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-card border border-slate-100 p-6 sm:p-10">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-card" aria-hidden="true">
-            <img src={collegeLogo} alt="" className="h-20 w-auto max-w-none" />
-          </div>
-          <h1 className="mt-4 text-xl font-bold text-slate-800 text-center">
-            FRANCIS XAVIER ENGINEERING COLLEGE
-          </h1>
-          <p className="text-xs text-primary font-medium text-center mt-1">
-            AUTONOMOUS INSTITUTION &bull; AFFILIATED TO ANNA UNIVERSITY &bull; NAAC 'A+' GRADE
-          </p>
-          <p className="text-sm text-slate-500 mt-2">Event Booking &amp; Approval Portal</p>
+          <img src={collegeLogo} alt="Francis Xavier Engineering College" className="w-full max-w-xs h-auto" />
+          <p className="text-sm text-slate-500 mt-4">Event Booking &amp; Approval Portal</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-card border border-slate-100 p-6 sm:p-12">
           {error && (
             <div className="bg-danger-light text-danger text-sm rounded-lg px-4 py-2 mb-4">
               {decodeURIComponent(error)}
@@ -39,7 +30,6 @@ export default function Login() {
           <p className="text-xs text-slate-400 text-center mt-5 flex items-center justify-center gap-1">
            Only registered institutional emails can sign in
           </p>
-        </div>
       </div>
     </div>
   );
