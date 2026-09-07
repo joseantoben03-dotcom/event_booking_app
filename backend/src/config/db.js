@@ -19,11 +19,13 @@ const sequelize = new Sequelize(
       updatedAt: 'updated_at',
     },
     pool: {
-      max: 2,       // Clever Cloud dev plan caps total connections at 5 — keep each
-                     // serverless instance's pool small so concurrent invocations don't exceed it
+      // Vercel can run several warm function instances at once. Keep one
+      // connection per instance because the database user is capped at 5.
+      max: 1,
       min: 0,
       acquire: 10000,
-      idle: 5000,    // release idle connections quickly instead of holding them open
+      idle: 1000,
+      evict: 1000,
     },
   }
 );
